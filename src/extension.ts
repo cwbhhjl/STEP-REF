@@ -6,11 +6,10 @@ import { HoverProvider, TextDocument, Position, CancellationToken, Hover } from 
 
 const STEP_MODE: vscode.DocumentFilter = { language: 'step', scheme: 'file' };
 
-function getStepReferenceId(document: TextDocument, position: Position) : string {
+function getStepReferenceIdFromDocument(document: TextDocument, position: Position): string {
 	let wordAtPosition = document.getWordRangeAtPosition(position, /#[0-9]+/);
-	let referenceIdText = '';
 	if (wordAtPosition) {
-		referenceIdText = document.getText(wordAtPosition);
+		let referenceIdText = document.getText(wordAtPosition);
 		if (referenceIdText.length > 1 && referenceIdText.startsWith('#')) {
 			return referenceIdText;
 		}
@@ -18,27 +17,43 @@ function getStepReferenceId(document: TextDocument, position: Position) : string
 	return '';
 }
 
-class StepHoverProvider implements HoverProvider {
-    public provideHover(
-        document: TextDocument, position: Position, token: CancellationToken):
-        Thenable<Hover> {
-			let refText = getStepReferenceId(document, position);
-			var word = '';
+function getTypeNameFromDocument(document: TextDocument, position: Position): string {
+	let wordAtPosition = document.getWordRangeAtPosition(position, /[0-9a-zA-Z_]+\s*\(/);
+	if (wordAtPosition) {
+		let typeName = document.getText(wordAtPosition);
+		if (typeName.length > 1) {
+			return typeName.replace(/\s*\(/, '');
+		}
+	}
+	return '';
+}
 
-			if (refText.length > 0) {
-				for (let index = 0; index < document.lineCount; index++) {
-					let line = document.lineAt(index);
-					let noWhiteIndex = line.firstNonWhitespaceCharacterIndex;
-					if (line.text.startsWith(refText, noWhiteIndex)) {
-						word = line.text;
-					}
+class StepHoverProvider implements HoverProvider {
+	public provideHover(
+		document: TextDocument, position: Position, token: CancellationToken):
+		Thenable<Hover> {
+		let refText = getStepReferenceIdFromDocument(document, position);
+		var word = '';
+
+		if (refText.length > 0) {
+			for (let index = 0; index < document.lineCount; index++) {
+				let line = document.lineAt(index);
+				let noWhiteIndex = line.firstNonWhitespaceCharacterIndex;
+				if (line.text.startsWith(refText, noWhiteIndex)) {
+					word = line.text;
 				}
 			}
+		} else {
+			// let typeName = getTypeNameFromDocument(document, position);
+			// if (typeName.length > 0) {
+			// 	word = typeName;
+			// }
+		}
 
-			return new Promise<Hover>((resolve, reject) => {
-				resolve(new Hover(word));
-			});
-    }
+		return new Promise<Hover>((resolve, reject) => {
+			resolve(new Hover(word));
+		});
+	}
 }
 
 // this method is called when your extension is activated
@@ -46,7 +61,7 @@ class StepHoverProvider implements HoverProvider {
 export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	debuglog('step active.');
+	console.log('step active.');
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with registerCommand
@@ -63,4 +78,4 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
