@@ -1,10 +1,20 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { debuglog, debug } from 'util';
 import { HoverProvider, TextDocument, Position, CancellationToken, Hover } from 'vscode';
 
 const STEP_MODE: vscode.DocumentFilter = { language: 'step', scheme: 'file' };
+
+const IFC_SCHEMA_URL = {
+	'IFC2X3': [
+		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_selecttype.htm',
+		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_enumtype.htm',
+		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_definedtype.htm',
+		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_entities.htm'
+	],
+	'IFC4': ['http://www.buildingsmart-tech.org/ifc/IFC4/final/html/toc.htm'],
+	'IFC4X1': ['http://www.buildingsmart-tech.org/ifc/IFC4x1/final/html/toc.htm']
+};
 
 function getStepReferenceIdFromDocument(document: TextDocument, position: Position): string {
 	let wordAtPosition = document.getWordRangeAtPosition(position, /#[0-9]+/);
@@ -23,6 +33,32 @@ function getTypeNameFromDocument(document: TextDocument, position: Position): st
 		let typeName = document.getText(wordAtPosition);
 		if (typeName.length > 1) {
 			return typeName.replace(/\s*\(/, '');
+		}
+	}
+	return '';
+}
+
+function getSchemaFromDocument(document: TextDocument, position: Position): string {
+	let headerLineNum = 0;
+	for (let index = 0; index < document.lineCount; index++) {
+		let line = document.lineAt(index);
+		if (line.text.indexOf('ENDSEC;') != -1) {
+			headerLineNum = index;
+			break;
+		}
+	}
+	if (headerLineNum != 0) {
+		let headerEnd = document.lineAt(headerLineNum - 1).range.end;
+		let headerText = document.getText(new vscode.Range(new Position(0, 0), headerEnd));
+		let headLines = headerText.split(/;/g);
+		for (let i = 0; i < headLines.length; i++) {
+			if (headLines[i].indexOf('FILE_SCHEMA') != -1) {
+				let schemaLine = headLines[i].replace(/\r?\n/g, '');
+				let matches = schemaLine.match(/(\s*\(\s*){2}'(.*)'(\s*\)\s*){2}/);
+				if (matches.length == 4) {
+					return matches[2];
+				}
+			}
 		}
 	}
 	return '';
