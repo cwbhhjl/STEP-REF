@@ -2,20 +2,26 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { HoverProvider, TextDocument, Position, CancellationToken, Hover } from 'vscode';
+import { URL } from 'url';
+
+import request = require('request');
+import htmlparser = require('htmlparser2');
 
 const STEP_MODE: vscode.DocumentFilter = { language: 'step', scheme: 'file' };
 const NOT_DIG_REGEXP = new RegExp(/\D/);
 
 const IFC_SCHEMA_URL = {
 	'IFC2X3': [
-		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_selecttype.htm',
-		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_enumtype.htm',
-		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_definedtype.htm',
-		'http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_entities.htm'
+		new URL('http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_selecttype.htm'),
+		new URL('http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_enumtype.htm'),
+		new URL('http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_definedtype.htm'),
+		new URL('http://www.buildingsmart-tech.org/ifc/IFC2x3/TC1/html/alphabeticalorder_entities.htm')
 	],
-	'IFC4': ['http://www.buildingsmart-tech.org/ifc/IFC4/final/html/toc.htm'],
-	'IFC4X1': ['http://www.buildingsmart-tech.org/ifc/IFC4x1/final/html/toc.htm']
+	'IFC4': [new URL('http://www.buildingsmart-tech.org/ifc/IFC4/final/html/toc.htm')],
+	'IFC4X1': [new URL('http://www.buildingsmart-tech.org/ifc/IFC4x1/final/html/toc.htm')]
 };
+
+var CURRENT_SCHEMA = '';
 
 function getStepReferenceIdFromDocument(document: TextDocument, position: Position): string {
 	let wordAtPosition = document.getWordRangeAtPosition(position, /#[0-9]+/);
@@ -65,7 +71,7 @@ function getSchemaFromDocument(document: TextDocument): string {
 	return '';
 }
 
-function getIfcSchemaUrls(schema?: string): string[] {
+function getIfcSchemaUrls(schema?: string): URL[] {
 	let schemaUrls = IFC_SCHEMA_URL['IFC4X1'];
 	if (schema != undefined && schema != '') {
 		if (schema.startsWith('IFC2X3')) {
@@ -75,6 +81,30 @@ function getIfcSchemaUrls(schema?: string): string[] {
 		}
 	}
 	return schemaUrls;
+}
+
+async function getIfcTypeHyperLink(typeName: string, schema?: string): Promise<string> {
+	let schemaUrls = getIfcSchemaUrls(schema);
+	return new Promise<string>((rev, rej) => {
+		for (let index = 0; index < schemaUrls.length; index++) {
+			request(schemaUrls[index].href, (error, response, body) => {
+				if (error) {
+					rej(`error: ${error}; response: ${response}`);
+				} else {
+					let parser = new htmlparser.Parser({
+						onopentag: (name, attr) => {
+							if (name == 'a' && attr.href.endsWith(`${typeName.toLowerCase()}.htm`)) {
+								parser.end();
+								rev(new URL(attr.href, schemaUrls[index]).href);
+							}
+						}
+					});
+					parser.write(body);
+					parser.end();
+				}
+			});
+		}
+	});
 }
 
 class StepHoverProvider implements HoverProvider {
@@ -98,10 +128,12 @@ class StepHoverProvider implements HoverProvider {
 				}
 			}
 		} else {
-			// let typeName = getTypeNameFromDocument(document, position);
-			// if (typeName.length > 0) {
-			// 	word = typeName;
-			// }
+			let typeName = getTypeNameFromDocument(document, position);
+			if (typeName.length > 0) {
+				return getIfcTypeHyperLink(typeName, CURRENT_SCHEMA).then(result => {
+					return new Hover(result);
+				});
+			}
 		}
 
 		return new Promise<Hover>((resolve, reject) => {
@@ -124,6 +156,7 @@ class SchemaInfoController {
 	private _onEvent() {
 		if (vscode.window.activeTextEditor.document.languageId === 'step') {
 			this._statusBarItem.text = getSchemaFromDocument(vscode.window.activeTextEditor.document);
+			CURRENT_SCHEMA = this._statusBarItem.text;
 			this._statusBarItem.show();
 		} else {
 			this._statusBarItem.hide();
