@@ -64,6 +64,18 @@ function getSchemaFromDocument(document: TextDocument): string {
 	return '';
 }
 
+function getIfcSchemaUrls(schema?: string): string[] {
+	let schemaUrls = IFC_SCHEMA_URL['IFC4X1'];
+	if (schema != undefined && schema != '') {
+		if (schema.startsWith('IFC2X3')) {
+			schemaUrls = IFC_SCHEMA_URL['IFC2X3'];
+		} else if (schema === 'IFC4') {
+			schemaUrls = IFC_SCHEMA_URL['IFC4'];
+		}
+	}
+	return schemaUrls;
+}
+
 class StepHoverProvider implements HoverProvider {
 	public provideHover(
 		document: TextDocument, position: Position, token: CancellationToken):
