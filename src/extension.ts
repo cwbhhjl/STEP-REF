@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { HoverProvider, TextDocument, Position, CancellationToken, Hover } from 'vscode';
 
 const STEP_MODE: vscode.DocumentFilter = { language: 'step', scheme: 'file' };
+const NOT_DIG_REGEXP = new RegExp(/\D/);
 
 const IFC_SCHEMA_URL = {
 	'IFC2X3': [
