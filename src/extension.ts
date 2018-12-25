@@ -38,7 +38,7 @@ function getTypeNameFromDocument(document: TextDocument, position: Position): st
 	return '';
 }
 
-function getSchemaFromDocument(document: TextDocument, position: Position): string {
+function getSchemaFromDocument(document: TextDocument): string {
 	let headerLineNum = 0;
 	for (let index = 0; index < document.lineCount; index++) {
 		let line = document.lineAt(index);
@@ -92,6 +92,32 @@ class StepHoverProvider implements HoverProvider {
 	}
 }
 
+class SchemaInfoController {
+	private _statusBarItem: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
+	private _disposable: vscode.Disposable;
+
+	constructor() {
+		let subscriptions: vscode.Disposable[] = [];
+		vscode.window.onDidChangeActiveTextEditor(this._onEvent, this, subscriptions);
+		this._disposable = vscode.Disposable.from(...subscriptions);
+		this._onEvent();
+	}
+
+	private _onEvent() {
+		if (vscode.window.activeTextEditor.document.languageId === 'step') {
+			this._statusBarItem.text = getSchemaFromDocument(vscode.window.activeTextEditor.document);
+			this._statusBarItem.show();
+		} else {
+			this._statusBarItem.hide();
+		}
+	}
+
+	dispose() {
+		this._disposable.dispose();
+		this._statusBarItem.dispose();
+	}
+}
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -111,6 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(disposable);
 	context.subscriptions.push(vscode.languages.registerHoverProvider(STEP_MODE, new StepHoverProvider()));
+	context.subscriptions.push(new SchemaInfoController());
 }
 
 // this method is called when your extension is deactivated
