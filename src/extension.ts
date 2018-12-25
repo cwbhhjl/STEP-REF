@@ -131,7 +131,7 @@ class StepHoverProvider implements HoverProvider {
 			let typeName = getTypeNameFromDocument(document, position);
 			if (typeName.length > 0) {
 				return getIfcTypeHyperLink(typeName, CURRENT_SCHEMA).then(result => {
-					return new Hover(result);
+					return new Hover(`[goto schema page](${result})`);
 				});
 			}
 		}
@@ -175,7 +175,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	console.log('step active.');
-	
+
 	context.subscriptions.push(vscode.languages.registerHoverProvider(STEP_MODE, new StepHoverProvider()));
 	context.subscriptions.push(new SchemaInfoController());
 }
