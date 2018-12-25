@@ -87,8 +87,13 @@ class StepHoverProvider implements HoverProvider {
 			for (let index = 0; index < document.lineCount; index++) {
 				let line = document.lineAt(index);
 				let noWhiteIndex = line.firstNonWhitespaceCharacterIndex;
-				if (line.text.startsWith(refText, noWhiteIndex)) {
-					word = line.text;
+				let afterRefIndex = refText.length + noWhiteIndex;
+				if (line.text.length > afterRefIndex) {
+					let nextChar = line.text[afterRefIndex];
+					if (line.text.startsWith(refText, noWhiteIndex) && (NOT_DIG_REGEXP.test(nextChar))) {
+						word = line.text;
+						break;
+					}
 				}
 			}
 		} else {
