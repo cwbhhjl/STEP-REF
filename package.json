@@ -3,8 +3,8 @@
 	"displayName": "step-ref",
 	"description": "step ifc",
 	"version": "0.0.1",
-	"publisher": "vscode-samples",
-	"repository": "https://github.com/Microsoft/vscode-extension-samples/helloworld-sample",
+	"publisher": "cwbhhjl",
+	"repository": "https://github.com/cwbhhjl/STEP-REF",
 	"engines": {
 		"vscode": "^1.25.0"
 	},
