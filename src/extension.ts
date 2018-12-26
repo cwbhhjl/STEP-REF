@@ -6,6 +6,9 @@ import { URL } from 'url';
 
 import request = require('request');
 import htmlparser = require('htmlparser2');
+import HtmlTableToJson = require('html-table-to-json');
+import xpath = require('xpath');
+import xmldom = require('xmldom');
 
 const STEP_MODE: vscode.DocumentFilter = { language: 'step', scheme: 'file' };
 const NOT_DIG_REGEXP = new RegExp(/\D/);
@@ -22,6 +25,15 @@ const IFC_SCHEMA_URL = {
 };
 
 var CURRENT_SCHEMA = '';
+
+const REQUEST_HEADER = {
+	'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0',
+	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+	'DNT': 1,
+	'Connection': 'keep-alive',
+	'Pragma': 'no-cache',
+	'Cache-Control': 'no-cache'
+};
 
 function getStepReferenceIdFromDocument(document: TextDocument, position: Position): string {
 	let wordAtPosition = document.getWordRangeAtPosition(position, /#[0-9]+/);
@@ -107,6 +119,44 @@ async function getIfcTypeHyperLink(typeName: string, schema?: string): Promise<s
 	});
 }
 
+function getIfc4x1EntityAttributeMarkdownString(ifcUrl: URL): Promise<string> {
+	return new Promise<string>((resolve, reject) => {
+		let md = `[goto schema page](${ifcUrl.href})  \n`;
+		request({ url: ifcUrl.href, headers: REQUEST_HEADER }, (error, response, body) => {
+			if (error) {
+				resolve(md);
+			} else {
+				let doc = new xmldom.DOMParser().parseFromString(body);
+				let tableNodes = xpath.select("//table[@class='attributes']", doc);
+
+				for (let i = 0; i < tableNodes.length; i++) {
+					let table = tableNodes[i];
+					if (table.previousSibling != undefined &&
+						table.previousSibling.textContent == "Attribute inheritance") {
+						let jsonTables = new HtmlTableToJson(table.toString());
+						let header = jsonTables.headers[0];
+						let result = jsonTables.results[0];
+						if (header[0] == '#' && header[1] == 'Attribute' && header[2] == 'Type') {
+							for (let index = 0; index < result.length; index++) {
+								let currentRow = result[index];
+								if (currentRow['#'].startsWith('Ifc')) {
+									md = md + '**' + currentRow['#'] + '**  \n';
+								} else if (currentRow['#'] == '') {
+									md = md + '*' + currentRow['Attribute'] + '* : `' + currentRow['Type'] + '`  \n';
+								} else {
+									md = md + currentRow['#'] + '.' + currentRow['Attribute'] + ' : `' + currentRow['Type'] + '`  \n';
+								}
+							}
+							resolve(md);
+							return;
+						}
+					}
+				}
+			}
+		})
+	});
+}
+
 class StepHoverProvider implements HoverProvider {
 	public provideHover(
 		document: TextDocument, position: Position, token: CancellationToken):
@@ -131,7 +181,13 @@ class StepHoverProvider implements HoverProvider {
 			let typeName = getTypeNameFromDocument(document, position);
 			if (typeName.length > 0) {
 				return getIfcTypeHyperLink(typeName, CURRENT_SCHEMA).then(result => {
-					return new Hover(`[goto schema page](${result})`);
+					if (CURRENT_SCHEMA == 'IFC4X1') {
+						return getIfc4x1EntityAttributeMarkdownString(new URL(result));
+					} else {
+						return `[goto schema page](${result})`;
+					}
+				}).then(result => {
+					return new Hover(result);
 				});
 			}
 		}
