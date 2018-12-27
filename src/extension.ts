@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { HoverProvider, TextDocument, Position, CancellationToken, Hover } from 'vscode';
+import { HoverProvider, TextDocument, Position, CancellationToken, Hover, DefinitionProvider, Definition, ProviderResult } from 'vscode';
 import { URL } from 'url';
 
 import request = require('request');
@@ -158,7 +158,7 @@ function getIfc4x1EntityAttributeMarkdownString(ifcUrl: URL): Promise<string> {
 }
 
 class StepHoverProvider implements HoverProvider {
-	public provideHover(
+	provideHover(
 		document: TextDocument, position: Position, token: CancellationToken):
 		Thenable<Hover> {
 		let refText = getStepReferenceIdFromDocument(document, position);
@@ -198,6 +198,28 @@ class StepHoverProvider implements HoverProvider {
 	}
 }
 
+class StepDefinitionProvider implements DefinitionProvider {
+	provideDefinition(
+		document: TextDocument, position: Position, token: CancellationToken): ProviderResult<Definition> {
+		let refText = getStepReferenceIdFromDocument(document, position);
+
+		if (refText.length > 0) {
+			for (let index = 0; index < document.lineCount; index++) {
+				let line = document.lineAt(index);
+				let noWhiteIndex = line.firstNonWhitespaceCharacterIndex;
+				let afterRefIndex = refText.length + noWhiteIndex;
+				if (line.text.length > afterRefIndex) {
+					let nextChar = line.text[afterRefIndex];
+					if (line.text.startsWith(refText, noWhiteIndex) && (NOT_DIG_REGEXP.test(nextChar))) {
+						return new vscode.Location(document.uri, new Position(index, noWhiteIndex));
+					}
+				}
+			}
+		}
+		return undefined;
+	}
+}
+
 class SchemaInfoController {
 	private _statusBarItem: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
 	private _disposable: vscode.Disposable;
@@ -233,6 +255,7 @@ export function activate(context: vscode.ExtensionContext) {
 	console.log('step active.');
 
 	context.subscriptions.push(vscode.languages.registerHoverProvider(STEP_MODE, new StepHoverProvider()));
+	context.subscriptions.push(vscode.languages.registerDefinitionProvider(STEP_MODE, new StepDefinitionProvider()));
 	context.subscriptions.push(new SchemaInfoController());
 }
 
