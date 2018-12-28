@@ -224,8 +224,9 @@ class StepDefinitionProvider implements DefinitionProvider {
 		} else {
 			let typeName = getTypeNameFromDocument(document, position);
 			if (typeName.length > 0) {
-				getIfcTypeHyperLink(typeName, CURRENT_SCHEMA).then(result => {
+				return getIfcTypeHyperLink(typeName, CURRENT_SCHEMA).then(result => {
 					vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(result));
+					return undefined;
 				});
 			}
 		}
