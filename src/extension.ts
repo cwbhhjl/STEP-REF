@@ -95,24 +95,30 @@ function getIfcSchemaUrls(schema?: string): URL[] {
 	return schemaUrls;
 }
 
-async function getIfcTypeHyperLink(typeName: string, schema?: string): Promise<string> {
-	let schemaUrls = getIfcSchemaUrls(schema);
-	return new Promise<string>((rev, rej) => {
-		for (let index = 0; index < schemaUrls.length; index++) {
-			request(schemaUrls[index].href, (error, response, body) => {
-				if (error) {
-					rej(`error: ${error}; response: ${response}`);
-				} else {
-					let parser = new htmlparser.Parser({
-						onopentag: (name, attr) => {
-							if (name == 'a' && attr.href.endsWith(`${typeName.toLowerCase()}.htm`)) {
-								parser.end();
+async function getIfcTypeHrefFromHtml(content: string, typeName: string): Promise<string> {
+	return new Promise<string>((resolve, reject) => {
+		let parser = new htmlparser.Parser({
+			onopentag: (name, attr) => {
+				if (name == 'a' && attr.href.endsWith(`${typeName.toLowerCase()}.htm`)) {
+					parser.end();
 								rev(new URL(attr.href, schemaUrls[index]).href);
 							}
 						}
 					});
 					parser.write(body);
 					parser.end();
+	});
+}
+
+async function getIfcTypeHyperLink(typeName: string, schema?: string): Promise<string> {
+	let schemaUrls = getIfcSchemaUrls(schema);
+	return new Promise<string>((rev, rej) => {
+		for (let index = 0; index < schemaUrls.length; index++) {
+			request(schemaUrls[index].href, async (error, response, body) => {
+				if (error) {
+					rej(`error: ${error}; response: ${response}`);
+				} else {
+					rev(new URL(await getIfcTypeHrefFromHtml(body, typeName), schemaUrls[index]).href);
 				}
 			});
 		}
