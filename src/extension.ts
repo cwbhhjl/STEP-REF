@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import { HoverProvider, TextDocument, Position, CancellationToken, Hover, DefinitionProvider, Definition, ProviderResult } from 'vscode';
+import { HoverProvider, TextDocument, Position, CancellationToken, Hover, DefinitionProvider, Definition, ProviderResult, Range } from 'vscode';
 import { URL } from 'url';
 
 import request = require('request');
@@ -211,7 +211,7 @@ class StepDefinitionProvider implements DefinitionProvider {
 				if (line.text.length > afterRefIndex) {
 					let nextChar = line.text[afterRefIndex];
 					if (line.text.startsWith(refText, noWhiteIndex) && (NOT_DIG_REGEXP.test(nextChar))) {
-						return new vscode.Location(document.uri, new Position(index, noWhiteIndex));
+						return new vscode.Location(document.uri, line.range);
 					}
 				}
 			}
