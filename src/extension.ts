@@ -101,12 +101,12 @@ async function getIfcTypeHrefFromHtml(content: string, typeName: string): Promis
 			onopentag: (name, attr) => {
 				if (name == 'a' && attr.href.endsWith(`${typeName.toLowerCase()}.htm`)) {
 					parser.end();
-								rev(new URL(attr.href, schemaUrls[index]).href);
-							}
-						}
-					});
-					parser.write(body);
-					parser.end();
+					resolve(attr.href);
+				}
+			}
+		});
+		parser.write(content);
+		parser.end();
 	});
 }
 
