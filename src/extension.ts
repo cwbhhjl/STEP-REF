@@ -246,12 +246,14 @@ class SchemaInfoController {
 	}
 
 	private _onEvent() {
-		if (vscode.window.activeTextEditor.document.languageId === 'step') {
-			this._statusBarItem.text = getSchemaFromDocument(vscode.window.activeTextEditor.document);
-			CURRENT_SCHEMA = this._statusBarItem.text;
-			this._statusBarItem.show();
-		} else {
-			this._statusBarItem.hide();
+		if (vscode.window.activeTextEditor.document) {
+			if (vscode.window.activeTextEditor.document.languageId === 'step') {
+				this._statusBarItem.text = getSchemaFromDocument(vscode.window.activeTextEditor.document);
+				CURRENT_SCHEMA = this._statusBarItem.text;
+				this._statusBarItem.show();
+			} else {
+				this._statusBarItem.hide();
+			}
 		}
 	}
 
