@@ -7,7 +7,8 @@ import { URL } from 'url';
 import request = require('request');
 import htmlparser = require('htmlparser2');
 import HtmlTableToJson = require('html-table-to-json');
-import xpath = require('xpath');
+//import xpath = require('xpath');
+import xpath = require("xpath-html");
 import xmldom = require('xmldom');
 import crypto = require('crypto');
 import fs = require('fs');
@@ -201,8 +202,8 @@ function getIfc4x1EntityAttributeMarkdownString(ifcUrl: URL): Promise<string> {
 			if (error) {
 				resolve(md);
 			} else {
-				let doc = new xmldom.DOMParser().parseFromString(body);
-				let tableNodes = xpath.select("//table[@class='attributes']", doc);
+				// let doc = new xmldom.DOMParser().parseFromString(body);
+				let tableNodes = xpath.fromPageSource(body).findElements("//table[@class='attributes']");
 
 				for (let i = 0; i < tableNodes.length; i++) {
 					let table = tableNodes[i];
