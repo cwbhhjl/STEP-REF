@@ -47,7 +47,7 @@
 		"html-table-to-json": "^0.4.0",
 		"htmlparser2": "^3.10.0",
 		"request": "^2.88.2",
-		"xmldom": "^0.3.0",
+		"xmldom": "^0.5.0",
 		"xpath-html": "^1.0.2"
 	}
 }
